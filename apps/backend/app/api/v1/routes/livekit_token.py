@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from fastapi import APIRouter
@@ -8,10 +9,13 @@ from livekit.api import (
     VideoGrants,
 )
 from livekit.protocol.agent_dispatch import CreateAgentDispatchRequest
+from livekit.protocol.models import ParticipantInfo
+from livekit.protocol.room import ListParticipantsRequest
 
 from app.core.config import settings
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 
 def _public_url() -> str:
@@ -27,6 +31,7 @@ async def get_livekit_token(user_id: str | None = None):
     """
     identity = user_id or f"guest-{uuid.uuid4().hex[:12]}"
     room_name = f"voicerag-{identity}"
+    print(f"[token] identity={identity} room={room_name}", flush=True)
 
     token = (
         AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
@@ -55,11 +60,16 @@ async def get_livekit_token(user_id: str | None = None):
                 departure_timeout=90,
             )
         )
-        dispatches = await lkapi.agent_dispatch.list_dispatch(room_name)
-        if not dispatches:
-            await lkapi.agent_dispatch.create_dispatch(
+        resp = await lkapi.room.list_participants(ListParticipantsRequest(room=room_name))
+        agent_present = any(p.kind == ParticipantInfo.Kind.AGENT for p in resp.participants)
+        log.info("room=%s participants=%d agent_present=%s", room_name, len(resp.participants), agent_present)
+        if not agent_present:
+            dispatch = await lkapi.agent_dispatch.create_dispatch(
                 CreateAgentDispatchRequest(agent_name="voicerag", room=room_name)
             )
+            log.info("dispatch created id=%s room=%s", dispatch.id, room_name)
+        else:
+            log.info("agent already in room — skipping dispatch room=%s", room_name)
 
     return {
         "token": token,
