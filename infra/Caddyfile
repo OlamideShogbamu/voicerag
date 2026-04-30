@@ -1,0 +1,31 @@
+# VoiceRAG reverse proxy — automatic HTTPS via Let's Encrypt
+# Set DOMAIN env var to your domain.
+
+{$DOMAIN} {
+    reverse_proxy frontend:3000
+
+    handle /health {
+        reverse_proxy backend:8000
+    }
+    handle /livekit/* {
+        reverse_proxy backend:8000
+    }
+    handle /ingest/* {
+        reverse_proxy backend:8000
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "microphone=self"
+        -Server
+    }
+
+    encode gzip
+    log {
+        output stderr
+        format json
+    }
+}

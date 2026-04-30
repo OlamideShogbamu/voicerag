@@ -1,0 +1,11 @@
+{
+  "name": "VoiceRAG",
+  "short_name": "VoiceRAG",
+  "description": "Real-time voice assistant with personal RAG knowledge.",
+  "start_url": "/dashboard/console",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#15803d",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities"]
+}

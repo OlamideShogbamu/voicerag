@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: voicerag
+      POSTGRES_PASSWORD: voicerag
+      POSTGRES_DB: voicerag
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../../apps/backend/app/db/migrations:/docker-entrypoint-initdb.d
+
+  backend:
+    build:
+      context: ../../apps/backend
+      dockerfile: ../../infra/docker/backend.Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../../apps/backend/.env
+    depends_on:
+      - postgres
+
+  agents:
+    build:
+      context: ../../apps/agents
+      dockerfile: ../../infra/docker/agents.Dockerfile
+    env_file:
+      - ../../apps/agents/.env
+    depends_on:
+      - postgres
+
+  frontend:
+    build:
+      context: ../../
+      dockerfile: infra/docker/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
